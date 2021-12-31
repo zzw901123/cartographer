@@ -60,8 +60,8 @@ PoseGraph2D::PoseGraph2D(
     const proto::PoseGraphOptions& options,
     std::unique_ptr<optimization::OptimizationProblem2D> optimization_problem,
     common::ThreadPool* thread_pool)
-    : options_(options),
-      optimization_problem_(std::move(optimization_problem)),
+    : options_(options), // options是从配置文件中装载的关于位姿图的配置项
+      optimization_problem_(std::move(optimization_problem)), // optimization_problem是一个智能指针指向后端优化问题求解器
       constraint_builder_(options_.constraint_builder_options(), thread_pool),
       thread_pool_(thread_pool) {
   // overlapping_submaps_trimmer_2d 在配置文件中被注释掉了, 没有使用
@@ -83,7 +83,7 @@ PoseGraph2D::~PoseGraph2D() {
 
 // 返回指定轨迹id下的正处于活跃状态下的子图的SubmapId
 std::vector<SubmapId> PoseGraph2D::InitializeGlobalSubmapPoses(
-    const int trajectory_id, const common::Time time,
+    const int trajectory_id, const common::Time time, // trajectory_id是运行轨迹的索引，time则是调用AddNode时对应路径节点的时间戳， insertion_submaps则是从Local SLAM一路传递过来的新旧子图
     const std::vector<std::shared_ptr<const Submap2D>>& insertion_submaps) {
   CHECK(!insertion_submaps.empty());
 
@@ -224,9 +224,9 @@ NodeId PoseGraph2D::AppendNode(
  * @return NodeId 返回节点的ID
  */
 NodeId PoseGraph2D::AddNode(
-    std::shared_ptr<const TrajectoryNode::Data> constant_data,
-    const int trajectory_id,
-    const std::vector<std::shared_ptr<const Submap2D>>& insertion_submaps) {
+    std::shared_ptr<const TrajectoryNode::Data> constant_data, //constant_data记录了更新子图时的点云信息以及相对位姿
+    const int trajectory_id, // 记录了轨迹索引
+    const std::vector<std::shared_ptr<const Submap2D>>& insertion_submaps) { //则是更新的子图 
   
   // 将节点在local坐标系下的坐标转成global坐标系下的坐标
   const transform::Rigid3d optimized_pose(
@@ -737,6 +737,7 @@ void PoseGraph2D::DrainWorkQueue() {
   LOG(INFO) << "Remaining work items in queue: " << work_queue_size;
   // We have to optimize again.
   // 退出循环后, 首先等待计算约束中的任务执行完, 再执行HandleWorkQueue,进行优化
+  // 约束构建器的WhenDone接口注册了一个回调函数HandleWorkQueue
   constraint_builder_.WhenDone(
       [this](const constraints::ConstraintBuilder2D::Result& result) {
         HandleWorkQueue(result);
@@ -1433,7 +1434,7 @@ PoseGraphInterface::SubmapData PoseGraph2D::GetSubmapDataUnderLock(
   if (data_.global_submap_poses_2d.Contains(submap_id)) {
     // We already have an optimized pose.
     return {submap,
-            transform::Embed3D(
+            transform::Embed3D( //转换到XY 平面
                 data_.global_submap_poses_2d.at(submap_id).global_pose)};
   }
   // We have to extrapolate.

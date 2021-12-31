@@ -277,7 +277,7 @@ void ActiveSubmaps2D::AddSubmap(const Eigen::Vector2f& origin) {
   submaps_.push_back(absl::make_unique<Submap2D>(
       origin,
       std::unique_ptr<Grid2D>(
-          static_cast<Grid2D*>(CreateGrid(origin).release())),
+          static_cast<Grid2D*>(CreateGrid(origin).release())), //调用了函数CreateGrid函数为该对象提供了一个保存栅格占用信息的存储结构
       &conversion_tables_));
 }
 

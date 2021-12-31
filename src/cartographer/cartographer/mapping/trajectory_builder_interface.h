@@ -51,7 +51,7 @@ class LocalSlamResultData;
 // 用于检测环路闭合的扫描匹配 以及 用于计算优化姿势估计的稀疏姿势图优化
 
 /**
- * @brief TrajectoryBuilderInterface是个接口类,没有具体实现
+ * @brief TrajectoryBuilderInterface是个接口类,没有具体实现 完整的SLAM技术栈，包括局部建图方法、局部位姿估计、闭环检测方法、以及面向稀疏位姿图的全局优化方法
  * GlobalTrajectoryBuilder类 与 CollatedTrajectoryBuilder类 都继承了 TrajectoryBuilderInterface
  * 并且都做了 AddSensorData() 的实现
  */
@@ -59,8 +59,8 @@ class TrajectoryBuilderInterface {
  public:
   struct InsertionResult {
     NodeId node_id;
-    std::shared_ptr<const TrajectoryNode::Data> constant_data;
-    std::vector<std::shared_ptr<const Submap>> insertion_submaps;
+    std::shared_ptr<const TrajectoryNode::Data> constant_data; //constant_data记录了子图更新时在局部地图中的位姿 以及有传感器原始数据转换之后的点云信息
+    std::vector<std::shared_ptr<const Submap>> insertion_submaps; //insertion_submaps则记录了被更新的子图对象
   };
 
   // c++11: std::function 通用多态函数封装器
@@ -70,14 +70,14 @@ class TrajectoryBuilderInterface {
 
   // c++11: using in c++11: c++11 的using可以用于模板部分具体化
 
-  // A callback which is called after local SLAM processes an accumulated
+  // A callback which is called after local SLAM processes an accumulated //通过关键字using和std::function定义了回调函数LocalSlamResultCallback的类型
   // 'sensor::RangeData'. If the data was inserted into a submap, reports the
   // assigned 'NodeId', otherwise 'nullptr' if the data was filtered out.
   using LocalSlamResultCallback =
-      std::function<void(int /* trajectory ID */, common::Time,
+      std::function<void(int /* trajectory ID */, common::Time, //分别记录了轨迹索引、更新子图的时间、局部的位姿估计、 激光传感器的扫描数据在局部坐标系下的点云信息、子图更新结果
                          transform::Rigid3d /* local pose estimate */,
                          sensor::RangeData /* in local frame */,
-                         std::unique_ptr<const InsertionResult>)>;
+                         std::unique_ptr<const InsertionResult>)>; 
 
   struct SensorId {
     // c++11: 限域枚举 enum class 
@@ -111,7 +111,7 @@ class TrajectoryBuilderInterface {
   TrajectoryBuilderInterface& operator=(const TrajectoryBuilderInterface&) =
       delete;
 
-  virtual void AddSensorData(
+  virtual void AddSensorData( //使用SensorBridge将ROS系统中的激光扫描数据转换成这里的TimedPointCloudData类型。
       const std::string& sensor_id,
       const sensor::TimedPointCloudData& timed_point_cloud_data) = 0;
   virtual void AddSensorData(const std::string& sensor_id,
@@ -123,7 +123,7 @@ class TrajectoryBuilderInterface {
       const sensor::FixedFramePoseData& fixed_frame_pose) = 0;
   virtual void AddSensorData(const std::string& sensor_id,
                              const sensor::LandmarkData& landmark_data) = 0;
-  // Allows to directly add local SLAM results to the 'PoseGraph'. c++11 that it
+  // Allows to directly add local SLAM results to the 'PoseGraph'. c++11 that it //还提供了一个接口AddLocalSlamResultData来直接将一个Local SLAM的结果添加到后端位姿图上
   // is invalid to add local SLAM results for a trajectory that has a
   // 'LocalTrajectoryBuilder2D/3D'.
   virtual void AddLocalSlamResultData(

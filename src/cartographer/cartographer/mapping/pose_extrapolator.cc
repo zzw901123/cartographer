@@ -99,9 +99,10 @@ void PoseExtrapolator::AddPose(const common::Time time,
   }
 
   // 根据加入的pose计算线速度与角速度
+  // 感觉是根据两位姿和时间计算当前速度与角速度
   UpdateVelocitiesFromPoses();
 
-  // 将imu_tracker_更新到time时刻
+  // 将imu_tracker_更新到time时刻 
   AdvanceImuTracker(time, imu_tracker_.get());
 
   // pose队列更新了,之前imu及里程计数据已经过时了
@@ -260,7 +261,8 @@ void PoseExtrapolator::TrimOdometryData() {
  * @param[in] time 要预测到的时刻
  * @param[in] imu_tracker 给定的先验状态
  */
-void PoseExtrapolator::AdvanceImuTracker(const common::Time time,
+// TODO 当不使用IMU数据时，将 angular_velocity_from_poses_ 或者 angular_velocity_from_odometry_ 数据传入了imu_tracker.
+void PoseExtrapolator::AdvanceImuTracker(const common::Time time, 
                                          ImuTracker* const imu_tracker) const {
   // 检查指定时间是否大于等于 ImuTracker 的时间
   CHECK_GE(time, imu_tracker->time());

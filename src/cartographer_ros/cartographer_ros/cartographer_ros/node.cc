@@ -241,6 +241,7 @@ bool Node::HandleSubmapQuery(
     ::cartographer_ros_msgs::SubmapQuery::Request& request,
     ::cartographer_ros_msgs::SubmapQuery::Response& response) {
   absl::MutexLock lock(&mutex_);
+  // node 与 map_builder_bridge 连接点
   map_builder_bridge_.HandleSubmapQuery(request, response);
   return true;
 }
@@ -312,6 +313,7 @@ void Node::AddExtrapolator(const int trajectory_id,
   // 在map::emplace()中使用forward_as_tuple时必须要加piecewise_construct,不加就报错
   // https://www.cnblogs.com/guxuanqing/p/11396511.html
 
+  // 对应位置trajectory_id 
   // 以1ms, 以及重力常数10, 作为参数构造PoseExtrapolator
   extrapolators_.emplace(
       std::piecewise_construct, 
@@ -600,14 +602,19 @@ Node::ComputeExpectedSensorIds(const TrajectoryOptions& options) const {
  * @param[in] options 轨迹的参数配置
  * @return int 新生成的轨迹的id
  */
-int Node::AddTrajectory(const TrajectoryOptions& options) {
+int Node::(const TrajectoryOptions& options) {
 
-  const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
+  // 获取传感器ID(唯一) 以及 对应话题
+  const std::set<cartographer::mapping::TrajectoryBuilderInterfAddTrajectoryace::SensorId>
       expected_sensor_ids = ComputeExpectedSensorIds(options);
 
   // 调用map_builder_bridge的AddTrajectory, 添加一个轨迹
   const int trajectory_id =
       map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);
+
+  //AddTrajectory函数也是通过调用map_builder_bridge_中的AddTrajectory来处理。
+  //同时，每增加一条轨迹，都需要给该轨迹增加必要的处理，
+  //比如添加位姿估计的AddExtrapolator，设置传感器的AddSensorSamplers，用来订阅必要的Topic以接收数据的LaunchSubscribers等。
 
   // 新增一个位姿估计器
   AddExtrapolator(trajectory_id, options);
@@ -761,7 +768,7 @@ cartographer_ros_msgs::StatusResponse Node::TrajectoryStateToStatus(
     status_response.code = cartographer_ros_msgs::StatusCode::NOT_FOUND;
     return status_response;
   }
-
+  //StrCat 可以高效的从多个组件构建一个字符串，这些组件可以是C 字符串、 std::string 类型、absl::string_view 类型、整型、浮点型、布尔型等等
   status_response.message =
       absl::StrCat("Trajectory ", trajectory_id, " is in '",
                    TrajectoryStateToString(it->second), "' state.");
@@ -894,6 +901,7 @@ bool Node::HandleStartTrajectory(
   // 检查通过, 添加一个新的轨迹
   else {
     response.status.message = "Success.";
+    //TODO 
     response.trajectory_id = AddTrajectory(trajectory_options);
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
   }
@@ -905,7 +913,7 @@ void Node::StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options) {
   absl::MutexLock lock(&mutex_);
   // 检查TrajectoryOptions是否存在2d或者3d轨迹的配置信息
   CHECK(ValidateTrajectoryOptions(options));
-  // 添加一条轨迹
+  // TODO 添加一条轨迹 一次建图过程
   AddTrajectory(options);
 }
 
@@ -1069,8 +1077,9 @@ bool Node::HandleReadMetrics(
 // 结束所有处于活动状态的轨迹
 void Node::FinishAllTrajectories() {
   absl::MutexLock lock(&mutex_);
+  // 使用for循环遍历了全部的轨迹状态
   for (const auto& entry : map_builder_bridge_.GetTrajectoryStates()) {
-    if (entry.second == TrajectoryState::ACTIVE) {
+    if (entry.second == TrajectoryState::ACTIVE) { //并且使用if语句判断，如果某条轨迹的value是ACTIVE，就要打log并报错
       const int trajectory_id = entry.first;
       CHECK_EQ(FinishTrajectoryUnderLock(trajectory_id).code,
                cartographer_ros_msgs::StatusCode::OK);
@@ -1103,6 +1112,7 @@ void Node::RunFinalOptimization() {
   }
   // Assuming we are not adding new data anymore, the final optimization
   // can be performed without holding the mutex.
+  // 如果每条轨迹的value都不是ACTIVE，可能已经完成了建图，优化一下轨迹，执行的也就是核心语句
   map_builder_bridge_.RunFinalOptimization();
 }
 
@@ -1172,6 +1182,7 @@ void Node::HandleImuMessage(const int trajectory_id,
     return;
   }
   auto sensor_bridge_ptr = map_builder_bridge_.sensor_bridge(trajectory_id);
+  // 获取IMU数据
   auto imu_data_ptr = sensor_bridge_ptr->ToImuData(msg);
   // extrapolators_使用里程计数据进行位姿预测
   if (imu_data_ptr != nullptr) {
@@ -1189,6 +1200,7 @@ void Node::HandleLaserScanMessage(const int trajectory_id,
   if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
     return;
   }
+
   map_builder_bridge_.sensor_bridge(trajectory_id)
       ->HandleLaserScanMessage(sensor_id, msg);
 }

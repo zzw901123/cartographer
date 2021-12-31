@@ -34,7 +34,7 @@ static auto* kLocalSlamMatchingResults = metrics::Counter::Null();
 static auto* kLocalSlamInsertionResults = metrics::Counter::Null();
 
 template <typename LocalTrajectoryBuilder, typename PoseGraph>
-class GlobalTrajectoryBuilder : public mapping::TrajectoryBuilderInterface {
+class GlobalTrajectoryBuilder : public mapping::TrajectoryBuilderInterface { //接口类TrajectoryBuilderInterface是为了给2D和3D建图提供一个统一的访问接口 该接口我们可以获得一个完整的SLAM技术栈，包括局部建图方法、局部位姿估计、闭环检测方法、以及面向稀疏位姿图的全局优化方法。
  public:
   // Passing a 'nullptr' for 'local_trajectory_builder' is acceptable, but no
   // 'TimedPointCloudData' may be added in that case.
@@ -42,14 +42,14 @@ class GlobalTrajectoryBuilder : public mapping::TrajectoryBuilderInterface {
   /**
    * @brief 完整的slam, 连接起了前端与后端
    * 
-   * @param[in] local_trajectory_builder 2d or 3d local slam 前端
+   * @param[in] local_trajectory_builder 2d or 3d local slam 前端 进行扫描匹配，估计机器人位姿，并将传感器数据插入子图中
    * @param[in] trajectory_id 轨迹id
-   * @param[in] pose_graph 2d or 3d pose_graph 后端
+   * @param[in] pose_graph 2d or 3d pose_graph 后端 闭环检测全局优化
    * @param[in] local_slam_result_callback 前端的回调函数
    * @param[in] pose_graph_odometry_motion_filter 里程计的滤波器
    */
   GlobalTrajectoryBuilder(
-      std::unique_ptr<LocalTrajectoryBuilder> local_trajectory_builder,
+      std::unique_ptr<LocalTrajectoryBuilder> local_trajectory_builder, 
       const int trajectory_id, PoseGraph* const pose_graph,
       const LocalSlamResultCallback& local_slam_result_callback,
       const absl::optional<MotionFilter>& pose_graph_odometry_motion_filter)
@@ -78,22 +78,24 @@ class GlobalTrajectoryBuilder : public mapping::TrajectoryBuilderInterface {
 
     // 进行扫描匹配, 返回匹配后的结果
     std::unique_ptr<typename LocalTrajectoryBuilder::MatchingResult>
-        matching_result = local_trajectory_builder_->AddRangeData(
+        matching_result = local_trajectory_builder_->AddRangeData( // TODO 成员函数AddRangeData完成Local SLAM的业务主线
             sensor_id, timed_point_cloud_data);
 
     if (matching_result == nullptr) {
       // The range data has not been fully accumulated yet.
       return;
     }
+
+    //将前端的输出结果喂给后端进行闭环检测和全局优化
     kLocalSlamMatchingResults->Increment();
     std::unique_ptr<InsertionResult> insertion_result;
 
     // matching_result->insertion_result 的类型是 LocalTrajectoryBuilder2D::InsertionResult
-    // 如果雷达成功插入到地图中
+    // 如果雷达成功插入到地图中 查询字段insertion_result判定前端成功的是否将传感器的数据插入到子图中
     if (matching_result->insertion_result != nullptr) {
       kLocalSlamInsertionResults->Increment();
 
-      // 将匹配后的结果 当做节点 加入到位姿图中
+      // 通过后端的位姿图接口AddNode创建一个轨迹节点，并把前端的输出结果喂给后端   将匹配后的结果 当做节点 加入到位姿图中
       auto node_id = pose_graph_->AddNode(
           matching_result->insertion_result->constant_data, trajectory_id_,
           matching_result->insertion_result->insertion_submaps);

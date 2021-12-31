@@ -81,7 +81,8 @@ class Submap2D : public Submap {
 
 /**
  * @brief 2个活跃的子图,旧的用于匹配,新的用于初始化,当新子图变成旧子图时候再进行匹配
- * 只有初始化时才只有1个子图.
+ * 只有初始化时才只有1个子图. 
+ * 当新图中插入一定数量的数据完成了初始化操作之后，它就会被当作旧图，用于扫描匹配
  */
 class ActiveSubmaps2D {
  public:
@@ -102,9 +103,9 @@ class ActiveSubmaps2D {
   void FinishSubmap();
   void AddSubmap(const Eigen::Vector2f& origin);
 
-  const proto::SubmapsOptions2D options_;
-  std::vector<std::shared_ptr<Submap2D>> submaps_;
-  std::unique_ptr<RangeDataInserterInterface> range_data_inserter_;
+  const proto::SubmapsOptions2D options_; //子图的配置选项
+  std::vector<std::shared_ptr<Submap2D>> submaps_; //保存当前维护子图的容器
+  std::unique_ptr<RangeDataInserterInterface> range_data_inserter_; //用于将扫描数据插入子图的工具，我们称它为插入器
   
   // 转换表, 第[0-32767]位置, 存的是[0.9, 0.1~0.9]的数据
   ValueConversionTables conversion_tables_; 

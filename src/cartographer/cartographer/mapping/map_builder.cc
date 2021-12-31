@@ -79,7 +79,7 @@ void MaybeAddPureLocalizationTrimmer(
 }  // namespace
 
 /**
- * @brief 保存配置参数, 根据给定的参数初始化线程池, 并且初始化pose_graph_与sensor_collator_
+ * @brief 保存配置参数options_, 根据给定的参数初始化线程池thread_pool_, 并且初始化pose_graph_与sensor_collator_
  * 
  * @param[in] options proto::MapBuilderOptions格式的 map_builder参数
  */
@@ -124,10 +124,11 @@ MapBuilder::MapBuilder(const proto::MapBuilderOptions& options)
  *        实际上是map_builder_bridge.cc 中的 OnLocalSlamResult() 函数
  * @return int 新生成的轨迹的id
  */
+// TODO cartographer 入口
 int MapBuilder::AddTrajectoryBuilder(
-    const std::set<SensorId>& expected_sensor_ids,
-    const proto::TrajectoryBuilderOptions& trajectory_options,
-    LocalSlamResultCallback local_slam_result_callback) {
+    const std::set<SensorId>& expected_sensor_ids, //expected_sensor_ids中记录了用于建图的所有传感器名称和类型
+    const proto::TrajectoryBuilderOptions& trajectory_options, // trajectory_options是新建的轨迹跟踪器的配置 
+    LocalSlamResultCallback local_slam_result_callback) { // ocal_slam_result_callback则是一个回调函数对象，用于响应局部地图构建完成的事件
 
   // id是从零开始的, 所以新trajectory_id就是trajectory_builders_的size()
   const int trajectory_id = trajectory_builders_.size();
@@ -188,22 +189,22 @@ int MapBuilder::AddTrajectoryBuilder(
   } 
   // 2d的轨迹
   else {
-    std::unique_ptr<LocalTrajectoryBuilder2D> local_trajectory_builder;
+    std::unique_ptr<LocalTrajectoryBuilder2D> local_trajectory_builder;  // local slam 的builder，值得点进去看看这个类
     if (trajectory_options.has_trajectory_builder_2d_options()) {
       // local_trajectory_builder(前端)的初始化
       local_trajectory_builder = absl::make_unique<LocalTrajectoryBuilder2D>(
           trajectory_options.trajectory_builder_2d_options(),
-          SelectRangeSensorIds(expected_sensor_ids));
+          SelectRangeSensorIds(expected_sensor_ids)); // 找到那些能检测距离的传感器，如laser，kinect
     }
-
+    //通过dynamic_cast将pose_graph_对象强制转换为PoseGraph2D，并检查数据类型是否正确
     DCHECK(dynamic_cast<PoseGraph2D*>(pose_graph_.get()));
 
     // CollatedTrajectoryBuilder初始化
     trajectory_builders_.push_back(absl::make_unique<CollatedTrajectoryBuilder>(
         trajectory_options, sensor_collator_.get(), trajectory_id,
         expected_sensor_ids,
-        // 将2D前端与2D位姿图打包在一起, 传入CollatedTrajectoryBuilder
-        CreateGlobalTrajectoryBuilder2D(
+        // 将2D前端与2D位姿图打包在一起, 传入CollatedTrajectoryBuilder  位于global_trajectory_builder.cpp中
+        CreateGlobalTrajectoryBuilder2D(  //直接调用global_trajectory_builder.cpp中函数
             std::move(local_trajectory_builder), trajectory_id,
             static_cast<PoseGraph2D*>(pose_graph_.get()),
             local_slam_result_callback, pose_graph_odometry_motion_filter)));
@@ -270,7 +271,7 @@ std::string MapBuilder::SubmapToProto(
   }
 
   // 获取地图数据
-  const auto submap_data = pose_graph_->GetSubmapData(submap_id);
+  const auto submap_data = pose_graph_->GetSubmapData(submap_id); // submap+转换位姿
   if (submap_data.submap == nullptr) {
     return "Requested submap " + std::to_string(submap_id.submap_index) +
            " from trajectory " + std::to_string(submap_id.trajectory_id) +

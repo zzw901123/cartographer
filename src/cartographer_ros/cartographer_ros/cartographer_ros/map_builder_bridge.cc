@@ -140,7 +140,7 @@ int MapBuilderBridge::AddTrajectory(
         expected_sensor_ids,
     const TrajectoryOptions& trajectory_options) {
   // Step: 1 开始一条新的轨迹, 返回新轨迹的id,需要传入一个函数
-  const int trajectory_id = map_builder_->AddTrajectoryBuilder(
+  const int trajectory_id = map_builder_->AddTrajectoryBuilder(  // map_builder_ 在 node_main.cpp 中实例化为 map_builder对象
       expected_sensor_ids, trajectory_options.trajectory_builder_options,
       // lambda表达式 local_slam_result_callback_
       [this](const int trajectory_id, 
@@ -150,7 +150,7 @@ int MapBuilderBridge::AddTrajectory(
              const std::unique_ptr<
                  const ::cartographer::mapping::TrajectoryBuilderInterface::
                      InsertionResult>) {
-        // 保存local slam 的结果数据 5个参数实际只用了4个
+        // TODO 保存local slam 的结果数据 5个参数实际只用了4个
         OnLocalSlamResult(trajectory_id, time, local_pose, range_data_in_local);
       });
   LOG(INFO) << "Added trajectory with ID '" << trajectory_id << "'.";
@@ -183,6 +183,7 @@ void MapBuilderBridge::FinishTrajectory(const int trajectory_id) {
 }
 
 // 当所有的轨迹结束时, 执行一次全局优化
+// PoseGraph2D/PoseGraph3D 继承自-> PoseGraph 继承自 -> PoseGraphInterface
 void MapBuilderBridge::RunFinalOptimization() {
   LOG(INFO) << "Running final trajectory optimization...";
   map_builder_->pose_graph()->RunFinalOptimization();

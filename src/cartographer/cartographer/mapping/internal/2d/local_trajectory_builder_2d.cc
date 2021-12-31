@@ -86,12 +86,12 @@ LocalTrajectoryBuilder2D::TransformToGravityAlignedFrameAndFilter(
  * @return std::unique_ptr<transform::Rigid2d> 匹配后的二维位姿
  */
 std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::ScanMatch(
-    const common::Time time, const transform::Rigid2d& pose_prediction,
-    const sensor::PointCloud& filtered_gravity_aligned_point_cloud) {
+    const common::Time time, const transform::Rigid2d& pose_prediction, 
+    const sensor::PointCloud& filtered_gravity_aligned_point_cloud) { //三个参数，分别记录了参考时间、位姿估计器预测的位姿、经过重力修正之后的扫描数据
   if (active_submaps_.submaps().empty()) {
     return absl::make_unique<transform::Rigid2d>(pose_prediction);
   }
-  // 使用active_submaps_的第一个子图进行匹配
+  // 使用active_submaps_的第一个子图进行匹配 获取对象active_submaps_中维护的用于扫描匹配的旧图
   std::shared_ptr<const Submap2D> matching_submap =
       active_submaps_.submaps().front();
   // The online correlative scan matcher will refine the initial estimate for
@@ -99,21 +99,24 @@ std::unique_ptr<transform::Rigid2d> LocalTrajectoryBuilder2D::ScanMatch(
   transform::Rigid2d initial_ceres_pose = pose_prediction;
 
   // 根据参数决定是否 使用correlative_scan_matching对先验位姿进行校准
+  // 输入的位姿估计器预测的位姿作为扫描匹配器迭代的初始位姿
   if (options_.use_online_correlative_scan_matching()) {
     const double score = real_time_correlative_scan_matcher_.Match(
-        pose_prediction, filtered_gravity_aligned_point_cloud,
+        pose_predictioon, filtered_gravity_aligned_point_cloud,
         *matching_submap->grid(), &initial_ceres_pose);
     kRealTimeCorrelativeScanMatcherScoreMetric->Observe(score);
   }
 
   auto pose_observation = absl::make_unique<transform::Rigid2d>();
   ceres::Solver::Summary summary;
-  // 使用ceres进行扫描匹配
+  // 使用ceres进行扫描匹配  
+  // 给定了迭代初值之后，就可以通过对象ceres_scan_matcher_把扫描匹配问题描述成为一个最小二乘的问题
   ceres_scan_matcher_.Match(pose_prediction.translation(), initial_ceres_pose,
                             filtered_gravity_aligned_point_cloud,
                             *matching_submap->grid(), pose_observation.get(),
                             &summary);
   // 一些度量
+  // 成功的求解了扫描匹配问题，那么就计算一下残差通过判据对象kCeresScanMatcherCostMetric，kScanMatcherResidualDistanceMetric和kScanMatcherResidualAngleMetric检查一下计算结果
   if (pose_observation) {
     kCeresScanMatcherCostMetric->Observe(summary.final_cost);
     const double residual_distance =
@@ -177,6 +180,7 @@ LocalTrajectoryBuilder2D::AddRangeData(
     return nullptr;
   }
 
+  // reserve操作允许我们通知容器它应该准备保存多少元素，reserve并不改变容器中元素的数量，它仅影响容器预先分配多大内存空间
   std::vector<transform::Rigid3f> range_data_poses;
   range_data_poses.reserve(synchronized_data.ranges.size());
   bool warned = false;
@@ -193,7 +197,7 @@ LocalTrajectoryBuilder2D::AddRangeData(
             << extrapolator_->GetLastExtrapolatedTime() << " to " << time_point;
         warned = true;
       }
-      time_point = extrapolator_->GetLastExtrapolatedTime();
+      time_point = extrapolator_->GetLastExtrapolatedTime(); //获取上次位姿时间
     }
     
     // Step: 2 预测出 每个点的时间戳时刻, tracking frame 在 local slam 坐标系下的位姿
@@ -271,9 +275,10 @@ LocalTrajectoryBuilder2D::AddRangeData(
     return AddAccumulatedRangeData(
         time,
         // 将点云变换到local原点处, 且姿态为0
-        TransformToGravityAlignedFrameAndFilter(
+        TransformToGravityAlignedFrameAndFilter( //给函数AddAccumulatedRangeData传参的时候调用了函数TransformToGravityAlignedFrameAndFilte
             gravity_alignment.cast<float>() * range_data_poses.back().inverse(),
-            accumulated_range_data_),
+            //struct RangeData数据类型 Eigen::Vector3f origin; PointCloud returns; PointCloud misses; // local坐标系下的坐标
+            accumulated_range_data_), //
         gravity_alignment, sensor_duration);
   }
 
@@ -411,6 +416,7 @@ LocalTrajectoryBuilder2D::InsertIntoSubmap(
 }
 
 // 将IMU数据加入到Extrapolator中
+// 通过函数InitializeExtrapolator完成位姿估计器的初始化工作，最后将IMU的数据喂给extrapolator_对象。
 void LocalTrajectoryBuilder2D::AddImuData(const sensor::ImuData& imu_data) {
   CHECK(options_.use_imu_data()) << "An unexpected IMU packet was added.";
   InitializeExtrapolator(imu_data.time);
@@ -418,6 +424,7 @@ void LocalTrajectoryBuilder2D::AddImuData(const sensor::ImuData& imu_data) {
 }
 
 // 将里程计数据加入到Extrapolator中
+// 它需要先通过检查对象extrapolator_是否为空指针来判定位姿估计器是否已经完成初始化工作了，若通过则直接将里程计的数据喂给extrapolator_对象。
 void LocalTrajectoryBuilder2D::AddOdometryData(
     const sensor::OdometryData& odometry_data) {
   if (extrapolator_ == nullptr) {

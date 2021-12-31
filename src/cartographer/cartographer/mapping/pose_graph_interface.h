@@ -37,8 +37,8 @@ class PoseGraphInterface {
   // 包含了子图的id, 节点的id, 节点j相对于子图i的坐标变换, 以及节点是在子图内还是子图外的标志
   struct Constraint {
     struct Pose {
-      transform::Rigid3d zbar_ij;
-      double translation_weight;
+      transform::Rigid3d zbar_ij; //字段zbar_ij描述的是在子图的εij
+      double translation_weight; //而字段translation_weight和rotation_weight分别是平移和旋转的权重  应该对应着刚刚的Σij，用于描述不确定度
       double rotation_weight;
     };
 

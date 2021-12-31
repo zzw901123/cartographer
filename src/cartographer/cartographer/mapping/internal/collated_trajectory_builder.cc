@@ -121,6 +121,15 @@ void CollatedTrajectoryBuilder::HandleCollatedSensorData(
   // [ INFO]: collated_trajectory_builder.cc:72] imu rate: 10.00 Hz 1.00e-01 s +/- 4.35e-05 s (pulsed at 100.44% real time)
   // [ INFO]: collated_trajectory_builder.cc:72] scan rate: 19.83 Hz 5.04e-02 s +/- 4.27e-05 s (pulsed at 99.82% real time)
 
+  //collated_trajectory_builder.cc的AddSensorData函数调用AddData函数的时候使用了sensor::MakeDispatchable函数，
+  //将传感器数据类型重载为dipatchable类型（定义于dispatchable.h）
+  //这是很重要的！！！！！！！
+
+  //ollated_trajectory_builder.cc的AddData -> collator.cc的AddSensorData -> odered_multi_queue的Add -> Dispatch()产生回调
+  //（注意此回调非上面所说的OnLocalSlamResult，而是在传感器数据进来之前odered_multi_queue被构造的时候定义的回调，传感器数据进来先回调它，是一个“第一回调”）
+
+
+
   // 将排序好的数据送入 GlobalTrajectoryBuilder中的AddSensorData()函数中进行使用
   data->AddToTrajectoryBuilder(wrapped_trajectory_builder_.get());
 }

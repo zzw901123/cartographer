@@ -61,7 +61,7 @@ CeresScanMatcher2D::CeresScanMatcher2D(
 CeresScanMatcher2D::~CeresScanMatcher2D() {}
 
 /**
- * @brief 基于Ceres的扫描匹配
+ * @brief 基于Ceres的扫描匹配 尽可能的将扫描的点云数据point_cloud放置到栅格地图grid上， 同时返回优化后的位姿估计pose_estimate和优化迭代信息summary
  * 
  * @param[in] target_translation 预测出来的先验位置, 只有xy
  * @param[in] initial_pose_estimate (校正后的)先验位姿, 有xy与theta
@@ -81,7 +81,7 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
                                    initial_pose_estimate.rotation().angle()};
   ceres::Problem problem;
 
-  // 地图部分的残差
+  // 地图部分的残差 (1) 占用栅格与扫描数据的匹配度， 
   CHECK_GT(options_.occupied_space_weight(), 0.);
   switch (grid.GetGridType()) {
     case GridType::PROBABILITY_GRID:
@@ -102,14 +102,14 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
       break;
   }
 
-  // 平移的残差
+  // 平移的残差 (2) 优化后的位置相对于target_translation的距离，
   CHECK_GT(options_.translation_weight(), 0.);
   problem.AddResidualBlock(
       TranslationDeltaCostFunctor2D::CreateAutoDiffCostFunction(
           options_.translation_weight(), target_translation), // 平移的目标值, 没有使用校准后的平移
       nullptr /* loss function */, ceres_pose_estimate);      // 平移的初值
 
-  // 旋转的残差, 固定了角度不变
+  // 旋转的残差, 固定了角度不变 (3) 旋转角度相对于迭代初值的偏差。
   CHECK_GT(options_.rotation_weight(), 0.);
   problem.AddResidualBlock(
       RotationDeltaCostFunctor2D::CreateAutoDiffCostFunction(

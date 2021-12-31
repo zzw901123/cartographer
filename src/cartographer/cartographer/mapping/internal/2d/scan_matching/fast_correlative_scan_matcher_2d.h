@@ -160,9 +160,9 @@ class FastCorrelativeScanMatcher2D {
                              const std::vector<Candidate2D>& candidates,
                              int candidate_depth, float min_score) const;
 
-  const proto::FastCorrelativeScanMatcherOptions2D options_;
-  MapLimits limits_;
-  std::unique_ptr<PrecomputationGridStack2D> precomputation_grid_stack_;
+  const proto::FastCorrelativeScanMatcherOptions2D options_; //关于闭环检测的扫描匹配器的各种配置
+  MapLimits limits_; //子图的地图作用范围，我们已经在分析占用栅格的数据结构的时候， 简单了解了该数据结构的字段和作用。
+  std::unique_ptr<PrecomputationGridStack2D> precomputation_grid_stack_; // 预算图的存储结构，用于查询不同分支尺寸下的搜索节点上界。
 };
 
 }  // namespace scan_matching

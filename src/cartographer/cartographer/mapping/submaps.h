@@ -100,8 +100,8 @@ class Submap {
 
  private:
   const transform::Rigid3d local_pose_; // 子图原点在local坐标系下的坐标
-  int num_range_data_ = 0;
-  bool insertion_finished_ = false;
+  int num_range_data_ = 0; // 子图中插入的数据数量
+  bool insertion_finished_ = false; // 标志着子图是否已经构建完成，是否需要继续更新该子图
 };
 
 }  // namespace mapping

@@ -251,8 +251,8 @@ class PoseGraph2D : public PoseGraph {
   void UpdateTrajectoryConnectivity(const Constraint& constraint)
       EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  const proto::PoseGraphOptions options_;
-  GlobalSlamOptimizationCallback global_slam_optimization_callback_;
+  const proto::PoseGraphOptions options_; // 位姿图的各种配置
+  GlobalSlamOptimizationCallback global_slam_optimization_callback_; // 完成全局优化后的回调函数
   // 只有这两个线程互斥锁
   mutable absl::Mutex mutex_;
   absl::Mutex work_queue_mutex_;
@@ -260,18 +260,18 @@ class PoseGraph2D : public PoseGraph {
   // If it exists, further work items must be added to this queue, and will be
   // considered later.
   // 指向 双端队列 的指针
-  std::unique_ptr<WorkQueue> work_queue_ GUARDED_BY(work_queue_mutex_);
+  std::unique_ptr<WorkQueue> work_queue_ GUARDED_BY(work_queue_mutex_); // 这是一个智能指针形式的工作队列，用于记录将要完成的任务
 
   // We globally localize a fraction of the nodes from each trajectory.
   absl::flat_hash_map<int, std::unique_ptr<common::FixedRatioSampler>>
-      global_localization_samplers_ GUARDED_BY(mutex_);
+      global_localization_samplers_ GUARDED_BY(mutex_); //这应该是一个以trajectory_id为索引的字典，用于对各个轨迹上的部分节点进行全局定位。
 
   // Number of nodes added since last loop closure.
-  int num_nodes_since_last_loop_closure_ GUARDED_BY(mutex_) = 0;
+  int num_nodes_since_last_loop_closure_ GUARDED_BY(mutex_) = 0; //	一个计数器，记录了自从上次闭环检测之后新增的节点数量。
 
   // Current optimization problem.
-  std::unique_ptr<optimization::OptimizationProblem2D> optimization_problem_;
-  constraints::ConstraintBuilder2D constraint_builder_;
+  std::unique_ptr<optimization::OptimizationProblem2D> optimization_problem_; //描述当前优化问题的对象
+  constraints::ConstraintBuilder2D constraint_builder_; //约束构造器，用于异步的计算约束
 
   // Thread pool used for handling the work queue.
   common::ThreadPool* const thread_pool_;

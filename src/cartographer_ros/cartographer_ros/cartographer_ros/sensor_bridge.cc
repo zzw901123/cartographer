@@ -155,7 +155,7 @@ std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
          "by setting angular_velocity_covariance[0] to -1. Cartographer "
          "requires this data to work. See "
          "http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html.";
-
+  //接着将ROS消息头中的时间戳转换成Cartographer中的时间， 并通过坐标变换对象tf_bridge_从ROS系统中查询IMU传感器相对于机器人坐标系的坐标变换关系。
   const carto::common::Time time = FromRos(msg->header.stamp);
   const auto sensor_to_tracking = tf_bridge_.LookupToTracking(
       time, CheckNoLeadingSlash(msg->header.frame_id));
@@ -178,6 +178,7 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
                                     const sensor_msgs::Imu::ConstPtr& msg) {
   std::unique_ptr<carto::sensor::ImuData> imu_data = ToImuData(msg);
   if (imu_data != nullptr) {
+    // 通过轨迹跟踪器的接口AddSensorData填塞数据
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::ImuData{imu_data->time, imu_data->linear_acceleration,
@@ -210,6 +211,7 @@ void SensorBridge::HandlePointCloud2Message(
     const sensor_msgs::PointCloud2::ConstPtr& msg) {
   carto::sensor::PointCloudWithIntensities point_cloud;
   carto::common::Time time;
+  // 点云处理操作 转换成为 带有时间戳点云数据   time: 点云最后一个点的时间 作为整个点云的时间戳
   std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
   HandleRangefinder(sensor_id, time, msg->header.frame_id, point_cloud.points);
 }

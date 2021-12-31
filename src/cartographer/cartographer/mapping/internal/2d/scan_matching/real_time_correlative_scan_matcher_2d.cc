@@ -109,6 +109,7 @@ RealTimeCorrelativeScanMatcher2D::GenerateExhaustiveSearchCandidates(
   // 生成候选解, 候选解是由像素坐标的偏差组成的
   for (int scan_index = 0; scan_index != search_parameters.num_scans;
        ++scan_index) {
+    // 生成candidates，一个offset（一个新的位姿）对应一个点云，所以有点云数量*x方向offset数量*y方向offset数量个可能解
     for (int x_index_offset = search_parameters.linear_bounds[scan_index].min_x;
          x_index_offset <= search_parameters.linear_bounds[scan_index].max_x;
          ++x_index_offset) {
@@ -157,12 +158,13 @@ double RealTimeCorrelativeScanMatcher2D::Match(
       GenerateRotatedScans(rotated_point_cloud, search_parameters);
   
   // Step: 3 将旋转后的点云集合按照预测出的平移量进行平移, 获取平移后的点在地图中的索引
+  // 将每个点云加上平移后投影到网格中
   const std::vector<DiscreteScan2D> discrete_scans = DiscretizeScans(
       grid.limits(), rotated_scans,
       Eigen::Translation2f(initial_pose_estimate.translation().x(),
                            initial_pose_estimate.translation().y()));
   
-  // Step: 4 生成所有的候选解
+  // Step: 4 根据搜索框 生成所有的候选解  初始化在xy平移空间内偏移量，即窗口大小和偏移量
   std::vector<Candidate2D> candidates =
       GenerateExhaustiveSearchCandidates(search_parameters);
   
@@ -186,6 +188,8 @@ void RealTimeCorrelativeScanMatcher2D::ScoreCandidates(
     const Grid2D& grid, const std::vector<DiscreteScan2D>& discrete_scans,
     const SearchParameters& search_parameters,
     std::vector<Candidate2D>* const candidates) const {
+  // 遍历所有的candidates可能解
+  // TODO discrete_scans是点云数据 candidate是候选解空间(即dtheta dx dy)
   for (Candidate2D& candidate : *candidates) {
     switch (grid.GetGridType()) {
       case GridType::PROBABILITY_GRID:

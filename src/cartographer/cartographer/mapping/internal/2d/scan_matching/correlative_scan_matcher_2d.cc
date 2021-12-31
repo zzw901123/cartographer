@@ -164,14 +164,20 @@ std::vector<sensor::PointCloud> GenerateRotatedScans(
   return rotated_scans;
 }
 
-// 将旋转后的点云集合按照预测出的平移量进行平移, 获取平移后的点在地图中的索引
+
+/**
+ * @brief:  将旋转后的点云集合按照预测出的平移量进行平移, 获取平移后的点在地图中的索引
+ * 
+ * @param[in]: map_limits: 地图x方向与y方向的格子数 resolution 地图分辨率 max 左上角的坐标为地图坐标的最大值
+ * 
+ */
 std::vector<DiscreteScan2D> DiscretizeScans(
     const MapLimits& map_limits, const std::vector<sensor::PointCloud>& scans,
     const Eigen::Translation2f& initial_translation) {
   // discrete_scans的size 为 旋转的点云的个数
   std::vector<DiscreteScan2D> discrete_scans;
   discrete_scans.reserve(scans.size());
-
+  // 遍历每帧中的点云
   for (const sensor::PointCloud& scan : scans) {
     // discrete_scans中的每一个 DiscreteScan2D 的size设置为这一帧点云中所有点的个数
     discrete_scans.emplace_back();

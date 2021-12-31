@@ -57,7 +57,7 @@ void ImuTracker::Advance(const common::Time time) {
   // 使用上一时刻的姿态 orientation_ 乘以姿态变化量, 得到当前时刻的预测出的姿态
   orientation_ = (orientation_ * rotation).normalized();
 
-  // 根据预测出的姿态变化量,预测旋转后的线性加速度的值
+  // 根据预测出的姿态变化量,预测旋转后的线性加速度的值 A^A=AA^=E A^是A的共轭转置 A 叫做酉矩阵
   gravity_vector_ = rotation.conjugate() * gravity_vector_;
   // 更新时间
   time_ = time;
@@ -78,6 +78,7 @@ void ImuTracker::AddImuLinearAccelerationObservation(
   const double delta_t =
       last_linear_acceleration_time_ > common::Time::min()
           ? common::ToSeconds(time_ - last_linear_acceleration_time_)
+          //在C/C++11中，std::numeric_limits为模板类，在库编译平台提供基础算术类型的极值等属性信息
           : std::numeric_limits<double>::infinity();
   last_linear_acceleration_time_ = time_;
 

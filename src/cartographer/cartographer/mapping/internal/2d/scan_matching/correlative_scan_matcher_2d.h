@@ -87,16 +87,16 @@ struct Candidate2D {
   int scan_index = 0;
 
   // Linear offset from the initial pose.
-  int x_index_offset = 0;
-  int y_index_offset = 0;
+  int x_index_offset = 0; //	x轴的搜索索引jx
+  int y_index_offset = 0; //  y轴的搜索索引jy
 
   // Pose of this Candidate2D relative to the initial pose.
-  double x = 0.;
-  double y = 0.;
-  double orientation = 0.;
+  double x = 0.; //  	相对于初始位姿的x偏移量rjx
+  double y = 0.; //   相对于初始位姿的y偏移量rjy
+  double orientation = 0.; // 	相对于初始位姿的角度偏移量δθjθ
 
   // Score, higher is better.
-  float score = 0.f;
+  float score = 0.f; // 候选点的评分，越高越好
 
   bool operator<(const Candidate2D& other) const { return score < other.score; }
   bool operator>(const Candidate2D& other) const { return score > other.score; }

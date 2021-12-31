@@ -22,7 +22,9 @@ namespace cartographer {
 namespace mapping {
 
 void LocalSlamResult2D::AddToTrajectoryBuilder(
-    TrajectoryBuilderInterface* const trajectory_builder) {
+    TrajectoryBuilderInterface* const trajectory_builder) { //传入的是wrapped_trajectory_builder_，
+                                                            //之前说过它是一个GlobalTrajectoryBuilder2D类型。
+                                                            //这个类型也是继承了TrajectoryBuilderInterface而来的。
   trajectory_builder->AddLocalSlamResultData(
       absl::make_unique<LocalSlamResult2D>(*this));
 }

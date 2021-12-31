@@ -42,11 +42,13 @@ std::unique_ptr<::cartographer::transform::Rigid3d> TfBridge::LookupToTracking(
             ->lookupTransform(tracking_frame_, frame_id, ::ros::Time(0.),
                               timeout)
             .header.stamp;
-    const ::ros::Time requested_time = ToRos(time);
+    
+    const ::ros::Time requested_time = ToRos(time); //对于点云来说 time： 点云数据里面最后收集点的时间戳
+    // 若是坐标系转换时间 大于请求时间
     if (latest_tf_time >= requested_time) {
       // We already have newer data, so we do not wait. Otherwise, we would wait
       // for the full 'timeout' even if we ask for data that is too old.
-      timeout = ::ros::Duration(0.);
+      timeout = ::ros::Duration(0.); //时间间隔
     }
     return absl::make_unique<::cartographer::transform::Rigid3d>(
         ToRigid3d(buffer_->lookupTransform(tracking_frame_, frame_id,

@@ -70,10 +70,11 @@ void Run() {
   std::tie(node_options, trajectory_options) =
       LoadOptions(FLAGS_configuration_directory, FLAGS_configuration_basename);
 
+  // TODO 
   // MapBuilder类是完整的SLAM算法类
   // 包含前端(TrajectoryBuilders,scan to submap) 与 后端(用于查找回环的PoseGraph) 
   auto map_builder =
-      cartographer::mapping::CreateMapBuilder(node_options.map_builder_options);
+      cartographer::mapping::CreateMapBuilder(node_options.map_builder_options); //返回是一个map_builder实例
   
   // c++11: std::move 是将对象的状态或者所有权从一个对象转移到另一个对象, 
   // 只是转移, 没有内存的搬迁或者内存拷贝所以可以提高利用效率,改善性能..
